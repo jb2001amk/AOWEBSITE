@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AÔ</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+  }
+
+  body {
+    background-color: white;
+  }
+
+  #home-link {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 10;
+  }
+
+  #home-link img {
+    display: block;
+    width: 200px;
+    height: auto;
+  }
+
+  #logo-grid {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: grid;
+    z-index: 5;
+  }
+
+  #logo-grid img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    opacity: 0;
+  }
+
+  @keyframes flicker {
+    0%   { opacity: 0; }
+    12%  { opacity: 1; }
+    24%  { opacity: 0.15; }
+    38%  { opacity: 0.9; }
+    52%  { opacity: 0.1; }
+    66%  { opacity: 0.75; }
+    80%  { opacity: 0.2; }
+    100% { opacity: 0; }
+  }
+
+  /* typography behind the 3D scene, faded in when the loop starts */
+  #typo {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: min(80vw, 80vh);
+    height: auto;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 3s ease;
+    pointer-events: none;
+  }
+
+  #typo.visible {
+    opacity: 1;
+  }
+
+  #fbx-stage {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.75s ease;
+  }
+
+  #fbx-stage.visible {
+    opacity: 1;
+  }
+
+  #fbx-stage canvas {
+    display: block;
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<img id="typo" src="AO_Beanie.png" alt="">
+<div id="fbx-stage"></div>
+<div id="logo-grid"></div>
+<a id="home-link" href="index.html"><img src="Wireframe.gif" alt="AÔ – home"></a>
+<script type="module">
+  import * as THREE from "three";
+  import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+
+  const stage = document.getElementById("fbx-stage");
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  stage.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+
+  // The intro plays once on page load, then the page switches to the loop file and
+  // repeats it until the page is reloaded.
+  // Blender exported every action onto every object ("All Actions"), so each FBX holds
+  // ~12 clips. Only these are the real (baked) object/action pairs; the rest are cross-assigned.
+  const INTRO = {
+    file: "FBX_Animationtest2.fbx",
+    clips: ["Camera_Bake|Action", "livingroom_Baked|Action.001"],
+  };
+  const LOOP = {
+    file: "FBX_Animationtest_loop.fbx",
+    clips: ["Camera.001|CameraAction.001", "textured|Action.002"],
+  };
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+  dirLight.position.set(1, 2, 3);
+  scene.add(dirLight);
+
+  // the scene currently on screen (INTRO, later LOOP) and the camera we render through
+  let active = INTRO;
+  let camera = null;
+
+  // the manager's onLoad fires once BOTH FBX files AND all their textures have finished loading
+  const manager = new THREE.LoadingManager();
+  manager.onLoad = start;
+
+  const loader = new FBXLoader(manager);
+  loader.setResourcePath("textures/");
+  [INTRO, LOOP].forEach((entry) => {
+    loader.load(entry.file, (loaded) => setUp(entry, loaded), undefined,
+      (err) => console.error(`Failed to load ${entry.file}:`, err));
+  });
+
+  function setUp(entry, model) {
+    entry.model = model;
+
+    // render through the animated camera from Blender if the file has one,
+    // otherwise centre the model and frame it with our own camera
+    const fbxCamera = model.getObjectByProperty("isCamera", true);
+    if (fbxCamera) {
+      // FBX cameras look down their +X axis, three.js cameras down -Z, so view through
+      // a child camera turned -90° that follows the animated FBX camera. The clip range
+      // comes from Blender in metres while the scene is in centimetres, so set our own.
+      entry.camera = new THREE.PerspectiveCamera(fbxCamera.fov, window.innerWidth / window.innerHeight, 1, 100000);
+      entry.camera.rotation.y = -Math.PI / 2;
+      fbxCamera.add(entry.camera);
+    } else {
+      entry.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      model.position.sub(center);
+
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const distance = maxDim / (2 * Math.tan(THREE.MathUtils.degToRad(entry.camera.fov) / 2)) * 1.5;
+      entry.camera.position.set(0, 0, distance);
+      entry.camera.near = distance / 100;
+      entry.camera.far = distance * 100;
+      entry.camera.updateProjectionMatrix();
+      entry.camera.lookAt(0, 0, 0);
+    }
+
+    // the intro plays once and holds its last frame, the loop repeats forever
+    const clips = model.animations.length > 1
+      ? model.animations.filter((clip) => entry.clips.includes(clip.name))
+      : model.animations;
+    entry.mixer = new THREE.AnimationMixer(model);
+    entry.actions = clips.map((clip) => {
+      const action = entry.mixer.clipAction(clip);
+      if (entry === INTRO) {
+        action.setLoop(THREE.LoopOnce, 1);
+        action.clampWhenFinished = true;
+      } else {
+        action.setLoop(THREE.LoopRepeat, Infinity);
+      }
+      return action.play();
+    });
+  }
+
+  // swap the intro for the loop in the same frame the last intro clip ends
+  function switchToLoop() {
+    if (active === LOOP || !LOOP.model) return;
+    scene.remove(INTRO.model);
+    LOOP.mixer.update(0); // pose the loop at its first frame before it is drawn
+    LOOP.model.visible = true;
+    active = LOOP;
+    camera = LOOP.camera;
+    document.getElementById("typo").classList.add("visible");
+  }
+
+  // Only show the scene and start the animation once everything is ready, so it never
+  // appears untextured and doesn't stall/jump while textures are uploaded to the GPU.
+  let started = false;
+  async function start() {
+    if (started || !INTRO.model) return;
+    started = true;
+    camera = INTRO.camera;
+
+    const models = [INTRO.model, LOOP.model].filter(Boolean);
+    models.forEach((model) => {
+      model.traverse((obj) => {
+        const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+        materials.forEach((mat) => { if (mat && mat.map) renderer.initTexture(mat.map); });
+      });
+      scene.add(model);
+    });
+    // compile the loop's materials up front too so the switch doesn't stutter,
+    // then hide it until the intro is done
+    await renderer.compileAsync(scene, camera);
+    if (LOOP.model) LOOP.model.visible = false;
+
+    // switch once every intro clip has played through once
+    let introRunning = INTRO.actions.length;
+    if (introRunning === 0) switchToLoop();
+    INTRO.mixer.addEventListener("finished", () => {
+      if (--introRunning === 0) switchToLoop();
+    });
+
+    // the timer starts here so the first frame doesn't skip ahead by the loading time
+    const timer = new THREE.Timer();
+    renderer.setAnimationLoop((time) => {
+      timer.update(time);
+      // the first frame's timestamp can be slightly older than the timer, giving a negative
+      // delta - that would make the play-once intro "finish" backwards on frame one
+      active.mixer.update(Math.max(0, timer.getDelta()));
+      renderer.render(scene, camera);
+    });
+
+    // fade the scene in once the first frame has been drawn
+    requestAnimationFrame(() => stage.classList.add("visible"));
+  }
+
+  window.addEventListener("resize", () => {
+    [INTRO.camera, LOOP.camera].forEach((cam) => {
+      if (!cam) return;
+      cam.aspect = window.innerWidth / window.innerHeight;
+      cam.updateProjectionMatrix();
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+<script>
+  const TILE_SIZE = 120;     // target tile size in px, used to decide how many fit
+  const EFFECT_DURATION = 4; // seconds, total time the fade in/out effect runs
+
+  function buildGrid() {
+    const grid = document.getElementById("logo-grid");
+    const cols = Math.max(1, Math.round(window.innerWidth / TILE_SIZE));
+    const rows = Math.max(1, Math.round(window.innerHeight / TILE_SIZE));
+
+    grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+    grid.innerHTML = "";
+    const total = cols * rows;
+    for (let i = 0; i < total; i++) {
+      const img = document.createElement("img");
+      img.src = "AÔ_Transparent.png";
+
+      // randomize each tile's timing so the whole grid flickers independently,
+      // while still finishing (opacity 0) by roughly EFFECT_DURATION seconds
+      const duration = EFFECT_DURATION * (0.7 + Math.random() * 0.3);
+      const delay = Math.random() * (EFFECT_DURATION - duration);
+      img.style.animation = `flicker ${duration}s ease-in-out ${delay}s 1 forwards`;
+
+      grid.appendChild(img);
+    }
+  }
+
+  buildGrid();
+  window.addEventListener("resize", buildGrid);
+</script>
+</body>
+</html>

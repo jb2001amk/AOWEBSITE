@@ -1,0 +1,111 @@
+FBX ANIMATION ON THE LANDING PAGE - SETUP & TROUBLESHOOTING NOTES
+==================================================================
+Written 2026-10-02. Covers how FBX_Animationtest2.fbx (Blender export) is shown
+on index.html and the problems that had to be fixed to make it look right.
+
+
+1. HOW IT WORKS
+---------------
+- index.html loads three.js 0.186.1 from the jsDelivr CDN (see the <script type="importmap">)
+  and uses its FBXLoader to load FBX_Animationtest2.fbx.
+- The page renders THROUGH THE CAMERA ANIMATED IN BLENDER (object "Camera_Bake"),
+  full screen, looping forever. Refreshing the page restarts the animation from frame 0.
+- If an FBX has no camera, the code falls back to its own camera that centres and
+  frames the model.
+- Textures are loaded from the textures/ folder (loader.setResourcePath("textures/")).
+
+
+2. HOW TO VIEW IT
+-----------------
+- The page must be opened through a local web server, NOT by double-clicking
+  index.html (browsers block loading the .fbx from file://).
+- Use the VS Code "Live Server" extension (right-click index.html > Open with Live Server).
+- Note: "python -m http.server" does NOT work on this PC - Python is only the
+  Microsoft Store placeholder, not a real install.
+
+
+3. PROBLEMS THAT WERE FIXED (and how)
+-------------------------------------
+a) FBX failed to load at all
+   Error in browser console: "THREE.KeyframeTrack: no keyframes in track named ..."
+   Cause: an empty animation channel in the FBX; older three.js (0.160) crashes on it.
+   Fix: upgraded three.js to 0.186.1 in the importmap.
+
+b) Wrong / mixed-up animation
+   Cause: Blender exported with "All Actions" on, so the FBX contained 12 clips -
+   every action applied to every object (e.g. the camera's motion applied to the room).
+   The page was playing all 12 at once.
+   Fix: index.html only plays the clips listed in CLIPS_TO_PLAY:
+       "Camera_Bake|Action"           (camera fly-through, baked)
+       "livingroom_Baked|Action.001"  (room rotation, baked)
+   If there is only ONE clip in the file, it is played automatically and
+   CLIPS_TO_PLAY is ignored.
+   -> If the room should NOT rotate, remove "livingroom_Baked|Action.001" from the list.
+
+c) Blender camera pointing the wrong way (screen stayed white)
+   Cause: FBX cameras look along their +X axis, three.js cameras look along -Z.
+   Fix: a three.js camera is added as a CHILD of the FBX camera, rotated -90 degrees
+   around Y (camera.rotation.y = -Math.PI / 2). It follows the animated FBX camera.
+
+d) Room invisible even with correct camera direction
+   Cause: the camera clip range from Blender (0.01 - 100) is in metres, but the
+   scene is in centimetres (object scale 100), so the room was beyond the far plane.
+   Fix: the child camera uses near = 1, far = 100000 instead of the FBX values.
+
+e) Model was plain grey
+   Cause: textures are NOT embedded in the FBX; it only references them at
+   L:\SSD\PROJECTS\AO_Website\Assets\3D\FBX_test\living-room-scan-1\source\poly\
+   Fix: the 16 *_map_Kd.jpg files were copied into textures/ next to index.html.
+   FBXLoader looks up textures by file name only, inside the resource path.
+
+f) On reload: model appeared untextured first, animation froze, then jumped ahead
+   Cause: the model was shown as soon as the FBX was parsed, while textures were
+   still downloading; uploading them to the GPU then stalled rendering, and the
+   animation clock had been running since page load, so it skipped ahead.
+   Fix: a THREE.LoadingManager waits for the FBX + all textures. Its onLoad calls
+   start(), which uploads the textures (renderer.initTexture), pre-compiles shaders
+   (renderer.compileAsync), and only THEN adds the model to the scene and starts
+   the render loop with a fresh THREE.Timer -> animation always begins at frame 0.
+   The white page is shown while loading (a short wait remains - the files are ~11 MB).
+   Once ready, the scene fades in over 0.75s: #fbx-stage starts at opacity 0 with a
+   CSS transition, and start() adds the "visible" class after the first frame is drawn.
+   Change the duration in the "transition: opacity 0.75s" line in index.html.
+
+
+4. RECOMMENDED BLENDER FBX EXPORT SETTINGS (avoids most of the above)
+---------------------------------------------------------------------
+- Path Mode: Copy  + click the "Embed Textures" icon next to it
+  (textures go inside the .fbx, no textures/ folder needed)
+- Bake Animation: ON
+    - All Actions: OFF   (only the active action per object gets exported)
+    - NLA Strips:  OFF
+- Make sure the camera that should be used on the website is in the export.
+
+After re-exporting:
+- Put the new .fbx in the project folder and update the file name in index.html
+  (loader.load("....fbx", ...)).
+- If the clip names changed, either update CLIPS_TO_PLAY or, if the file now has
+  only one clip, nothing needs to change.
+
+
+5. HOW TO DEBUG IF IT BREAKS AGAIN
+----------------------------------
+- Open the page in Live Server, press F12, check the Console tab for red errors
+  (e.g. "Failed to load FBX: ...", or 404 errors for missing texture files).
+- To list the clips inside an FBX, temporarily add inside the loader.load callback:
+      console.log(model.animations.map(c => c.name));
+- White/empty screen usually means: camera pointing the wrong way, or near/far
+  clip range wrong for the scene's units (see 3c / 3d).
+- Grey model means textures were not found (see 3e).
+
+
+INTRO -> LOOP (added 2026-10-05)
+--------------------------------
+- On page load FBX_Animationtest2.fbx (intro) plays ONCE. When it ends, the page swaps
+  to FBX_Animationtest_loop.fbx and repeats that forever. Reloading starts the intro again.
+- Both files are loaded up front, so the swap happens in the same frame with no loading gap.
+- The loop file has different object names (Camera.001 / textured) and is also an
+  "All Actions" export. index.html plays only (LOOP.clips):
+      "Camera.001|CameraAction.001"  (static camera = the intro's final camera pose)
+      "textured|Action.002"          (room rotating -82 -> 278 deg, a seamless full turn)
+  "textured|Action.001" is almost identical; switch to it if Action.002 looks wrong.
