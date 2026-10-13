@@ -7,7 +7,6 @@
   html, body {
     margin: 0;
     padding: 0;
-    height: 100%;
     width: 100%;
   }
 
@@ -15,25 +14,18 @@
     background-color: white;
   }
 
-  #home-link {
-    position: fixed;
-    top: 16px;
-    left: 16px;
-    z-index: 10;
-  }
-
-  #home-link img {
-    display: block;
-    width: 200px;
-    height: auto;
+  /* each page fills one screen; the second page sits below the first and is reached by scrolling */
+  .page {
+    position: relative;
+    height: 100vh;
+    height: 100svh; /* on phones, don't hide content behind the browser's address bar */
+    overflow: hidden;
+    background-color: white;
   }
 
   #logo-grid {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    position: absolute;
+    inset: 0;
     display: grid;
     z-index: 5;
   }
@@ -56,214 +48,296 @@
     100% { opacity: 0; }
   }
 
-  /* typography behind the 3D scene, faded in when the loop starts */
-  #typo {
-    position: fixed;
+  /* globe-with-hat GIF in the centre, faded in while the grid effect plays (timing set in the script).
+     Capped at the GIF's own 400px height so it isn't blown up and blurry. */
+  #beanie {
+    position: absolute;
     top: 50%;
     left: 50%;
-    width: min(80vw, 80vh);
-    height: auto;
+    height: min(80vh, 400px);
+    max-width: 80vw;
+    width: auto;
+    object-fit: contain;
     transform: translate(-50%, -50%);
     z-index: 0;
     opacity: 0;
-    transition: opacity 3s ease;
     pointer-events: none;
   }
 
-  #typo.visible {
-    opacity: 1;
-  }
-
-  #fbx-stage {
+  /* animated GIF that follows the mouse in place of the normal cursor
+     (a CSS cursor can't play an animated GIF, so it's an image moved by the script) */
+  #cursor {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 1;
+    width: 120px;
+    height: auto;
+    z-index: 100;
+    pointer-events: none;
     opacity: 0;
-    transition: opacity 0.75s ease;
+    transition: opacity 0.2s ease;
   }
 
-  #fbx-stage.visible {
+  #cursor.visible {
     opacity: 1;
   }
 
-  #fbx-stage canvas {
+  /* images dropped along the mouse path, alternating Wireframe.gif / AÔ_Transparent.png */
+  .trail {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 120px;
+    height: auto;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0.75;
+  }
+
+  .trail.logo {
+    width: 90px;
+  }
+
+  /* fades from the trail's 75% opacity to nothing; the script delays it by TRAIL_FADE_START */
+  @keyframes trail-fade {
+    from { opacity: 0.75; }
+    to   { opacity: 0; }
+  }
+
+  /* only replace the system cursor on devices with a mouse, not touch screens */
+  @media (pointer: fine) {
+    html, html * {
+      cursor: none;
+    }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* page 2: carousel of logos spinning around a ring, draggable with the mouse */
+  #carousel {
+    position: absolute;
+    inset: 0;
+    z-index: 0; /* keeps the logos' own stacking inside the carousel, below the cursor and trail */
+    touch-action: pan-y; /* on touch screens, horizontal drags spin it, vertical swipes still scroll */
+    user-select: none;
+  }
+
+  #carousel img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 180px;
+    height: auto;
+    will-change: transform, opacity;
+    -webkit-user-drag: none;
+  }
+
+  /* back arrow, shown top left once a logo has been picked and the others have left */
+  #carousel-back {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    z-index: 1;
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    border: 2px solid black;
+    border-radius: 50%;
+    background: white;
+    color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visibility 0.4s, background-color 0.2s ease, color 0.2s ease;
+  }
+
+  #carousel-back.visible {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  #carousel-back:hover {
+    background: black;
+    color: white;
+  }
+
+  #carousel-back svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* shop mockup, centred in the right two thirds once a logo has been picked (not functional) */
+  #shop {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 33.333%;
+    right: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    color: black;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.6s ease, visibility 0.6s;
+  }
+
+  #shop.visible {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .shop-panel {
+    width: min(420px, 90%);
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .shop-title {
+    margin: 0;
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .shop-price {
+    margin: -16px 0 0;
+    font-size: 22px;
+  }
+
+  .shop-label {
+    margin: 0 0 12px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .shop-swatches {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .shop-swatch {
+    width: 64px;
+    height: 64px;
+    padding: 4px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: white;
+    transition: border-color 0.2s ease;
+  }
+
+  .shop-swatch img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
     display: block;
   }
-</style>
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"
+
+  .shop-swatch.active {
+    border-color: black;
   }
-}
-</script>
+
+  .shop-swatch:hover {
+    border-color: #999;
+  }
+
+  .shop-buttons {
+    display: flex;
+    gap: 12px;
+  }
+
+  .shop-cart,
+  .shop-express {
+    height: 56px;
+    border: 2px solid black;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .shop-cart {
+    width: 56px;
+    flex: none;
+    background: white;
+    color: black;
+  }
+
+  .shop-cart svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .shop-express {
+    flex: 1;
+    background: black;
+    color: white;
+  }
+
+  .shop-cart:hover {
+    background: black;
+    color: white;
+  }
+
+  .shop-express:hover {
+    background: white;
+    color: black;
+  }
+</style>
 </head>
 <body>
-<img id="typo" src="AO_Beanie.png" alt="">
-<div id="fbx-stage"></div>
-<div id="logo-grid"></div>
-<a id="home-link" href="index.html"><img src="Wireframe.gif" alt="AÔ – home"></a>
-<script type="module">
-  import * as THREE from "three";
-  import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
-
-  const stage = document.getElementById("fbx-stage");
-
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  stage.appendChild(renderer.domElement);
-
-  const scene = new THREE.Scene();
-
-  // The intro plays once on page load, then the page switches to the loop file and
-  // repeats it until the page is reloaded.
-  // Blender exported every action onto every object ("All Actions"), so each FBX holds
-  // ~12 clips. Only these are the real (baked) object/action pairs; the rest are cross-assigned.
-  const INTRO = {
-    file: "FBX_Animationtest2.fbx",
-    clips: ["Camera_Bake|Action", "livingroom_Baked|Action.001"],
-  };
-  const LOOP = {
-    file: "FBX_Animationtest_loop.fbx",
-    clips: ["Camera.001|CameraAction.001", "textured|Action.002"],
-  };
-
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
-  const dirLight = new THREE.DirectionalLight(0xffffff, 2);
-  dirLight.position.set(1, 2, 3);
-  scene.add(dirLight);
-
-  // the scene currently on screen (INTRO, later LOOP) and the camera we render through
-  let active = INTRO;
-  let camera = null;
-
-  // the manager's onLoad fires once BOTH FBX files AND all their textures have finished loading
-  const manager = new THREE.LoadingManager();
-  manager.onLoad = start;
-
-  const loader = new FBXLoader(manager);
-  loader.setResourcePath("textures/");
-  [INTRO, LOOP].forEach((entry) => {
-    loader.load(entry.file, (loaded) => setUp(entry, loaded), undefined,
-      (err) => console.error(`Failed to load ${entry.file}:`, err));
-  });
-
-  function setUp(entry, model) {
-    entry.model = model;
-
-    // render through the animated camera from Blender if the file has one,
-    // otherwise centre the model and frame it with our own camera
-    const fbxCamera = model.getObjectByProperty("isCamera", true);
-    if (fbxCamera) {
-      // FBX cameras look down their +X axis, three.js cameras down -Z, so view through
-      // a child camera turned -90° that follows the animated FBX camera. The clip range
-      // comes from Blender in metres while the scene is in centimetres, so set our own.
-      entry.camera = new THREE.PerspectiveCamera(fbxCamera.fov, window.innerWidth / window.innerHeight, 1, 100000);
-      entry.camera.rotation.y = -Math.PI / 2;
-      fbxCamera.add(entry.camera);
-    } else {
-      entry.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
-      const box = new THREE.Box3().setFromObject(model);
-      const size = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
-      model.position.sub(center);
-
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const distance = maxDim / (2 * Math.tan(THREE.MathUtils.degToRad(entry.camera.fov) / 2)) * 1.5;
-      entry.camera.position.set(0, 0, distance);
-      entry.camera.near = distance / 100;
-      entry.camera.far = distance * 100;
-      entry.camera.updateProjectionMatrix();
-      entry.camera.lookAt(0, 0, 0);
-    }
-
-    // the intro plays once and holds its last frame, the loop repeats forever
-    const clips = model.animations.length > 1
-      ? model.animations.filter((clip) => entry.clips.includes(clip.name))
-      : model.animations;
-    entry.mixer = new THREE.AnimationMixer(model);
-    entry.actions = clips.map((clip) => {
-      const action = entry.mixer.clipAction(clip);
-      if (entry === INTRO) {
-        action.setLoop(THREE.LoopOnce, 1);
-        action.clampWhenFinished = true;
-      } else {
-        action.setLoop(THREE.LoopRepeat, Infinity);
-      }
-      return action.play();
-    });
-  }
-
-  // swap the intro for the loop in the same frame the last intro clip ends
-  function switchToLoop() {
-    if (active === LOOP || !LOOP.model) return;
-    scene.remove(INTRO.model);
-    LOOP.mixer.update(0); // pose the loop at its first frame before it is drawn
-    LOOP.model.visible = true;
-    active = LOOP;
-    camera = LOOP.camera;
-    document.getElementById("typo").classList.add("visible");
-  }
-
-  // Only show the scene and start the animation once everything is ready, so it never
-  // appears untextured and doesn't stall/jump while textures are uploaded to the GPU.
-  let started = false;
-  async function start() {
-    if (started || !INTRO.model) return;
-    started = true;
-    camera = INTRO.camera;
-
-    const models = [INTRO.model, LOOP.model].filter(Boolean);
-    models.forEach((model) => {
-      model.traverse((obj) => {
-        const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
-        materials.forEach((mat) => { if (mat && mat.map) renderer.initTexture(mat.map); });
-      });
-      scene.add(model);
-    });
-    // compile the loop's materials up front too so the switch doesn't stutter,
-    // then hide it until the intro is done
-    await renderer.compileAsync(scene, camera);
-    if (LOOP.model) LOOP.model.visible = false;
-
-    // switch once every intro clip has played through once
-    let introRunning = INTRO.actions.length;
-    if (introRunning === 0) switchToLoop();
-    INTRO.mixer.addEventListener("finished", () => {
-      if (--introRunning === 0) switchToLoop();
-    });
-
-    // the timer starts here so the first frame doesn't skip ahead by the loading time
-    const timer = new THREE.Timer();
-    renderer.setAnimationLoop((time) => {
-      timer.update(time);
-      // the first frame's timestamp can be slightly older than the timer, giving a negative
-      // delta - that would make the play-once intro "finish" backwards on frame one
-      active.mixer.update(Math.max(0, timer.getDelta()));
-      renderer.render(scene, camera);
-    });
-
-    // fade the scene in once the first frame has been drawn
-    requestAnimationFrame(() => stage.classList.add("visible"));
-  }
-
-  window.addEventListener("resize", () => {
-    [INTRO.camera, LOOP.camera].forEach((cam) => {
-      if (!cam) return;
-      cam.aspect = window.innerWidth / window.innerHeight;
-      cam.updateProjectionMatrix();
-    });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-</script>
+<section id="page-1" class="page">
+  <img id="beanie" src="AO_GLOBExHAT.gif" alt="">
+  <div id="logo-grid"></div>
+</section>
+<section id="page-2" class="page">
+  <div id="carousel"></div>
+  <button id="carousel-back" type="button" aria-label="Back">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 12H5M11 6l-6 6 6 6"/>
+    </svg>
+  </button>
+  <!-- shop mockup: shown once a logo is picked; the buttons don't do anything -->
+  <div id="shop">
+    <div class="shop-panel">
+      <h2 class="shop-title">AÔ Beanie</h2>
+      <p class="shop-price">20 CHF</p>
+      <div>
+        <p class="shop-label">Color: <span id="shop-color-name"></span></p>
+        <div class="shop-swatches" id="shop-swatches"></div>
+      </div>
+      <div class="shop-buttons">
+        <button class="shop-cart" type="button" aria-label="Add to cart">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="20" r="1.5"/>
+            <circle cx="18" cy="20" r="1.5"/>
+            <path d="M2 3h3l2.7 12.4a1 1 0 0 0 1 .8h9.6a1 1 0 0 0 1-.8L21 7H6"/>
+          </svg>
+        </button>
+        <button class="shop-express" type="button">Express Checkout</button>
+      </div>
+    </div>
+  </div>
+</section>
+<img id="cursor" src="Wireframe.gif" alt="">
 <script>
   const TILE_SIZE = 120;     // target tile size in px, used to decide how many fit
-  const EFFECT_DURATION = 4; // seconds, total time the fade in/out effect runs
+  const EFFECT_DURATION = 2.8; // seconds, total time the fade in/out effect runs
+  const BEANIE_FADE = EFFECT_DURATION; // seconds, how long the beanie takes to fade in (alongside the grid)
 
   function buildGrid() {
     const grid = document.getElementById("logo-grid");
@@ -291,6 +365,359 @@
 
   buildGrid();
   window.addEventListener("resize", buildGrid);
+
+  // the beanie fades in at the same time as the grid effect runs
+  document.getElementById("beanie").style.animation =
+    `fade-in ${BEANIE_FADE}s ease-in-out 0s 1 forwards`;
+
+  // keep the GIF centred on the mouse; hide it when the mouse leaves the window
+  const cursor = document.getElementById("cursor");
+
+  // trail: drop an image every TRAIL_GAP px of mouse movement, alternating between the two
+  // files, and remove each one TRAIL_LIFETIME seconds after it appears
+  const TRAIL_GAP = 100;     // px of mouse travel between two trail images
+  const TRAIL_FADE_START = 0;    // seconds after appearing that the fade-out begins
+  const TRAIL_FADE_DURATION = 1; // seconds the fade-out takes
+  const TRAIL_LIFETIME = TRAIL_FADE_START + TRAIL_FADE_DURATION; // seconds before a trail image despawns
+  const TRAIL_IMAGES = [
+    { src: "Wireframe.gif", className: "trail" },
+    { src: "AÔ_Transparent.png", className: "trail logo" },
+  ];
+  let trailIndex = 0;
+  let lastDrop = null;
+
+  function dropTrail(x, y) {
+    const { src, className } = TRAIL_IMAGES[trailIndex];
+    trailIndex = (trailIndex + 1) % TRAIL_IMAGES.length;
+
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "";
+    img.className = className;
+    img.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+    img.style.animation =
+      `trail-fade ${TRAIL_FADE_DURATION}s linear ${TRAIL_FADE_START}s forwards`;
+    document.body.appendChild(img);
+    setTimeout(() => img.remove(), TRAIL_LIFETIME * 1000);
+  }
+
+  if (window.matchMedia("(pointer: fine)").matches) {
+    document.addEventListener("mousemove", (e) => {
+      cursor.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%, -50%)`;
+      cursor.classList.add("visible");
+
+      if (e.buttons !== 0) {
+        // no trail while a mouse button is held (clicking / dragging); keep the drop point
+        // with the mouse so the trail picks up one gap after the button is released
+        lastDrop = { x: e.clientX, y: e.clientY };
+      } else if (!lastDrop || Math.hypot(e.clientX - lastDrop.x, e.clientY - lastDrop.y) >= TRAIL_GAP) {
+        dropTrail(e.clientX, e.clientY);
+        lastDrop = { x: e.clientX, y: e.clientY };
+      }
+    });
+    document.documentElement.addEventListener("mouseleave", () => cursor.classList.remove("visible"));
+  }
+
+  // ---- page 2 carousel ----
+  // Logos sit on a ring that spins: each one travels across the front, then round behind
+  // the others and back. Depth is worked out from its angle: at the front it is full size
+  // and opacity, at the back half size and 40% opacity, and halfway in between at the sides.
+  // Clicking a logo picks it: it grows, glides into the left third of the page and hovers
+  // there, while the ring speeds up and each other logo leaves in a straight line to the
+  // right edge as soon as it reaches the front. Once they are all gone a back arrow appears,
+  // which plays the whole thing in reverse and returns to the spinning ring.
+  //
+  // Everything after a click is driven by one clock, pickTime (seconds since the click).
+  // It runs forwards while picking and backwards when going back, so the return is an
+  // exact mirror of the way out.
+
+  // the original logo plus four hue-shifted copies, one per position on the ring
+  const CAROUSEL_IMAGES = [
+    "AÔ_Transparent.png",
+    "AO_Transparent_green.png",
+    "AO_Transparent_blue.png",
+    "AO_Transparent_pink.png",
+    "AO_Transparent_red.png",
+  ];
+  const CAROUSEL_COLOR_NAMES = ["Lime", "Green", "Blue", "Pink", "Red"]; // shown in the shop mockup
+  const CAROUSEL_COUNT = CAROUSEL_IMAGES.length;
+  const CAROUSEL_SPEED = 20;        // degrees per second when nobody is dragging
+  const CAROUSEL_BACK_SCALE = 0.5;  // size at the back (front is 1)
+  const CAROUSEL_BACK_OPACITY = 0.4; // opacity at the back (front is 1)
+  const CAROUSEL_TILT = 0.15;       // how much higher the back of the ring sits, as a share of the radius
+  const DRAG_SENSITIVITY = 0.4;     // degrees of spin per pixel dragged
+  const CLICK_TOLERANCE = 5;        // px the mouse may move during a press and still count as a click
+
+  const PICK_SCALE = 4;             // picked logo grows to this many times its normal size
+  const PICK_GROW_TIME = 0.6;       // seconds to grow
+  const PICK_MOVE_TIME = 0.8;       // seconds to glide into the left third
+  const HOVER_HEIGHT = 10;          // px up and down while hovering
+  const HOVER_PERIOD = 3;           // seconds for one hover up-and-down
+  const HOVER_EASE_TIME = 0.5;      // seconds for the hover to build up / settle down
+  const LEAVE_SPIN_SPEED = 90;      // degrees per second the ring turns while the others leave
+  const EXIT_ACCELERATION = 1500;   // px/s² a leaving logo speeds up by on its way to the right edge
+  const BACK_SPEED = 1.5;           // the return plays this many times faster than the way out
+
+  const easeInOut = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  const clamp01 = (t) => Math.min(1, Math.max(0, t));
+
+  const carousel = document.getElementById("carousel");
+  const backButton = document.getElementById("carousel-back");
+  const items = CAROUSEL_IMAGES.map((src, i) => {
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "";
+    img.draggable = false;
+    carousel.appendChild(img);
+    // mode: "ring" (spinning), "picked" (the clicked one), "exiting" (leaving to the right)
+    // or "gone" (off screen). exitTime is the pickTime at which it left the ring.
+    return { img, offset: i * 360 / CAROUSEL_COUNT, mode: "ring", exitTime: null,
+             x: 0, y: 0, scale: 1, opacity: 1, z: 0 };
+  });
+
+  // phase of the whole carousel:
+  // "spinning" → (click) → "picking" → (all others gone) → "picked" → (back) → "returning" → "spinning"
+  let phase = "spinning";
+  let picked = null;     // the clicked logo
+  let pickTime = 0;      // seconds along the pick animation
+  let pickAngle = 0;     // ring angle at the moment of the click
+  let pickDoneTime = 1;  // pickTime at which the last other logo had gone (length of the way out)
+
+  let angle = 0;     // current spin of the whole ring, in degrees
+  let velocity = CAROUSEL_SPEED; // degrees per second, eased back to CAROUSEL_SPEED after a drag
+  let dragging = false;
+  let dragX = 0;
+  let dragTime = 0;
+  let pressStart = null; // where the current press began, and which logo it was on
+
+  const ringRadius = () => Math.min(window.innerWidth * 0.35, 380);
+
+  // where a logo on the ring is drawn, from its angle
+  function ringPose(item) {
+    const radius = ringRadius();
+    const theta = (angle + item.offset) * Math.PI / 180;
+    const depth = Math.cos(theta);       // 1 = front, -1 = back
+    const t = (1 - depth) / 2;           // 0 at the front, 0.5 at the sides, 1 at the back
+    return {
+      x: Math.sin(theta) * radius,
+      y: depth * radius * CAROUSEL_TILT, // front lower, back higher
+      scale: 1 - t * (1 - CAROUSEL_BACK_SCALE),
+      opacity: 1 - t * (1 - CAROUSEL_BACK_OPACITY),
+      z: Math.round(depth * 100) + 100,  // front ones cover the back ones
+    };
+  }
+
+  // a leaving logo: a straight line from the front point to the right edge. It carries on
+  // at the speed it had on the ring and accelerates from there, so there's no hitch at the hand-off.
+  function exitPose(item) {
+    const t = pickTime - item.exitTime;
+    const x = item.fromX + item.fromSpeed * t + EXIT_ACCELERATION * t * t / 2;
+    return { x, y: item.fromY, scale: 1, opacity: 1, z: item.exitZ };
+  }
+
+  // the picked logo: grow in place, then glide to the middle of the left third, then hover
+  function pickedPose(item, now) {
+    let grow, move, hoverAmount;
+    if (phase === "returning") {
+      // on the way back it shrinks and glides home at the same time, spread over the whole
+      // return, so it lands in its place just as the others have rejoined the ring
+      const back = easeInOut(clamp01(pickTime / pickDoneTime));
+      grow = move = hoverAmount = back;
+    } else {
+      grow = easeInOut(clamp01(pickTime / PICK_GROW_TIME));
+      move = easeInOut(clamp01((pickTime - PICK_GROW_TIME) / PICK_MOVE_TIME));
+      hoverAmount = clamp01((pickTime - PICK_GROW_TIME - PICK_MOVE_TIME) / HOVER_EASE_TIME);
+    }
+    const hover = Math.sin(now / 1000 / HOVER_PERIOD * Math.PI * 2) * HOVER_HEIGHT * hoverAmount;
+    // never grow so big that it spills out of the left third or off the page
+    const fit = Math.min(window.innerWidth / 3 * 0.9, window.innerHeight * 0.8) / item.img.offsetWidth;
+    const targetScale = Math.min(PICK_SCALE, fit);
+    const targetX = -window.innerWidth / 3; // centre of the left third, relative to the page centre
+    return {
+      x: item.fromX + (targetX - item.fromX) * move,
+      y: item.fromY + (0 - item.fromY) * move - hover,
+      scale: item.fromScale + (targetScale - item.fromScale) * grow,
+      opacity: item.fromOpacity + (1 - item.fromOpacity) * grow,
+      z: 300,
+    };
+  }
+
+  function draw(item, pose) {
+    Object.assign(item, pose);
+    item.img.style.transform =
+      `translate(-50%, -50%) translate(${pose.x}px, ${pose.y}px) scale(${pose.scale})`;
+    item.img.style.opacity = pose.opacity;
+    item.img.style.zIndex = pose.z;
+  }
+
+  function layoutCarousel(now) {
+    const offRight = window.innerWidth / 2 + 180; // past the right edge, with room for the logo
+    items.forEach((item) => {
+      if (item === picked) {
+        item.mode = "picked";
+        draw(item, pickedPose(item, now));
+      } else if (item.exitTime !== null && pickTime >= item.exitTime) {
+        const pose = exitPose(item);
+        item.mode = pose.x > offRight ? "gone" : "exiting";
+        if (item.mode === "exiting") draw(item, pose);
+      } else {
+        item.mode = "ring";
+        draw(item, ringPose(item));
+      }
+      item.img.style.visibility = item.mode === "gone" ? "hidden" : "visible";
+    });
+  }
+
+  function pick(item) {
+    picked = item;
+    phase = "picking";
+    pickTime = 0;
+    pickAngle = angle;
+    dragging = false;
+    // remember where it started, so it can grow/move from there and return to it
+    item.fromX = item.x;
+    item.fromY = item.y;
+    item.fromScale = item.scale;
+    item.fromOpacity = item.opacity;
+  }
+
+  // ---- shop mockup ----
+  // one swatch per colour; hovering one swaps the big picked logo to that colour
+  const shop = document.getElementById("shop");
+  const shopColorName = document.getElementById("shop-color-name");
+  const swatches = CAROUSEL_IMAGES.map((src, i) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "shop-swatch";
+    button.setAttribute("aria-label", CAROUSEL_COLOR_NAMES[i]);
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "";
+    img.draggable = false;
+    button.appendChild(img);
+    button.addEventListener("mouseenter", () => selectColor(i));
+    button.addEventListener("click", () => selectColor(i));
+    document.getElementById("shop-swatches").appendChild(button);
+    return button;
+  });
+
+  function selectColor(i) {
+    if (picked) picked.img.src = CAROUSEL_IMAGES[i];
+    shopColorName.textContent = CAROUSEL_COLOR_NAMES[i];
+    swatches.forEach((swatch, j) => swatch.classList.toggle("active", j === i));
+  }
+
+  function showShop() {
+    selectColor(items.indexOf(picked)); // start on the colour that was clicked
+    shop.classList.add("visible");
+  }
+
+  backButton.addEventListener("click", () => {
+    if (phase !== "picked") return;
+    phase = "returning";
+    backButton.classList.remove("visible");
+    shop.classList.remove("visible");
+    // put the picked logo back to its own colour before it rejoins the ring
+    picked.img.src = CAROUSEL_IMAGES[items.indexOf(picked)];
+  });
+
+  carousel.addEventListener("pointerdown", (e) => {
+    if (phase !== "spinning") return;
+    dragging = true;
+    dragX = e.clientX;
+    dragTime = performance.now();
+    velocity = 0;
+    pressStart = { x: e.clientX, y: e.clientY, item: items.find((it) => it.img === e.target) };
+    carousel.setPointerCapture(e.pointerId);
+  });
+
+  carousel.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const now = performance.now();
+    const delta = (e.clientX - dragX) * DRAG_SENSITIVITY;
+    angle += delta;
+    // remember how fast it was being dragged, so it keeps that momentum when let go
+    const dt = Math.max(1, now - dragTime) / 1000;
+    velocity = delta / dt;
+    dragX = e.clientX;
+    dragTime = now;
+  });
+
+  carousel.addEventListener("pointerup", (e) => {
+    if (!dragging) return;
+    dragging = false;
+    // a press that barely moved is a click, not a drag
+    const moved = pressStart && Math.hypot(e.clientX - pressStart.x, e.clientY - pressStart.y);
+    if (pressStart && pressStart.item && moved < CLICK_TOLERANCE) pick(pressStart.item);
+    pressStart = null;
+  });
+  carousel.addEventListener("pointercancel", () => { dragging = false; pressStart = null; });
+
+  // only animate while page 2 is on screen
+  let carouselVisible = false;
+  new IntersectionObserver(([entry]) => { carouselVisible = entry.isIntersecting; })
+    .observe(document.getElementById("page-2"));
+
+  let lastFrame = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.1, (now - lastFrame) / 1000);
+    lastFrame = now;
+    if (carouselVisible) {
+      if (phase === "picking") {
+        // the remaining logos finish their turn; each leaves once it passes the front
+        const before = angle;
+        pickTime += dt;
+        angle = pickAngle + LEAVE_SPIN_SPEED * pickTime;
+        items.forEach((item) => {
+          if (item === picked || item.exitTime !== null) return;
+          if (Math.floor((before + item.offset) / 360) < Math.floor((angle + item.offset) / 360)) {
+            // start from exactly where it is on the ring this frame (just past the front point),
+            // moving right at the ring's speed there: radius × angular speed in radians
+            const pose = ringPose(item);
+            item.exitTime = pickTime;
+            item.fromX = pose.x;
+            item.fromY = ringRadius() * CAROUSEL_TILT;
+            item.fromSpeed = ringRadius() * LEAVE_SPIN_SPEED * Math.PI / 180;
+            item.exitZ = pose.z;
+          }
+        });
+      } else if (phase === "returning") {
+        // play the pick animation backwards: the others fly back in from the right and rejoin
+        // the ring as it turns back, and the picked logo shrinks back into its place
+        pickTime = Math.max(0, pickTime - dt * BACK_SPEED);
+        angle = pickAngle + LEAVE_SPIN_SPEED * pickTime;
+        if (pickTime === 0) {
+          phase = "spinning";
+          picked = null;
+          items.forEach((item) => { item.exitTime = null; });
+          // it was turning backwards; let it ease round to the normal forward spin
+          velocity = -LEAVE_SPIN_SPEED * BACK_SPEED;
+        }
+      } else if (phase === "spinning") {
+        if (!dragging) {
+          // after a flick (or coming back), ease the speed back to the normal spin
+          velocity += (CAROUSEL_SPEED - velocity) * Math.min(1, dt * 2);
+          angle += velocity * dt;
+        } else if (now - dragTime > 100) {
+          velocity = 0; // held still while dragging, so no flick on release
+        }
+      }
+
+      layoutCarousel(now);
+
+      // once every other logo has gone, stop the clock (the picked one keeps hovering)
+      // and offer the way back
+      if (phase === "picking" && items.every((item) => item === picked || item.mode === "gone")) {
+        phase = "picked";
+        pickDoneTime = pickTime;
+        backButton.classList.add("visible");
+        showShop();
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  layoutCarousel(performance.now());
+  requestAnimationFrame(tick);
 </script>
 </body>
 </html>
