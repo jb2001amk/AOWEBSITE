@@ -1,0 +1,107 @@
+/* shared styles for the text pages: Terms & Conditions, Impressum, About */
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: white;
+  color: black;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.6;
+}
+
+/* globe-with-hat GIF top left, takes you back to the main page */
+.info-header {
+  padding: 20px 24px;
+}
+
+.info-header img {
+  display: block;
+  height: 48px;
+  width: auto;
+  transition: opacity 0.2s ease;
+}
+
+.info-header a:hover img {
+  opacity: 0.6;
+}
+
+main {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+h1 {
+  margin: 0 0 32px;
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+h2 {
+  margin: 40px 0 12px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+p {
+  margin: 0 0 16px;
+}
+
+/* larger statement lines, e.g. on the About page */
+.lead {
+  margin: 32px 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+ul {
+  margin: 0 0 16px;
+  padding-left: 20px;
+}
+
+main a {
+  color: black;
+  text-underline-offset: 3px;
+}
+
+/* company name and address at the top of a page */
+address {
+  margin: 0 0 16px;
+  font-style: normal;
+}
+
+/* placeholder text still to be replaced with the real content */
+.todo {
+  color: #888;
+}
+
+/* same text links as at the bottom of the main page */
+footer {
+  border-top: 1px solid black;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px 48px;
+  padding: 32px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+footer a {
+  color: black;
+  text-decoration: none;
+}
+
+footer a:hover,
+footer a[aria-current="page"] {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}

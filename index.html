@@ -10,6 +10,48 @@
     width: 100%;
   }
 
+  /* the nav links glide to their page instead of jumping */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* buttons fixed to the top of the screen, so they stay in view while scrolling:
+     Home on the left, Cart (placeholder) on the right */
+  #nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 60; /* above the logos and the trail */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    /* hidden at the top of the page; the script fades it in once you scroll down a bit */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visibility 0.4s;
+  }
+
+  #nav.visible {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Home is the globe-with-hat GIF, Cart is the cart icon */
+  #nav img {
+    display: block;
+    width: auto;
+    transition: opacity 0.2s ease;
+  }
+
+  #nav .nav-home img { height: 48px; }
+  #nav .nav-cart img { height: 28px; }
+
+  #nav a:hover img {
+    opacity: 0.6;
+  }
+
   body {
     background-color: white;
   }
@@ -23,14 +65,44 @@
     background-color: white;
   }
 
-  #logo-grid {
+  /* grids of flickering tiles: the intro one covers page 1 on load; the typo ones sit behind
+     each page's content and flicker every so often (timing set in the script) */
+  #logo-grid,
+  .typo-grid {
     position: absolute;
     inset: 0;
     display: grid;
+    pointer-events: none; /* lets clicks through to what's underneath */
+  }
+
+  #logo-grid {
     z-index: 5;
   }
 
-  #logo-grid img {
+  /* shown while scrolling, then fades out over about a second once scrolling stops;
+     the tiles' flicker is paused while it's hidden */
+  .typo-grid {
+    z-index: 0; /* behind the globe-with-hat GIF and the carousel (both z-index 1) */
+    opacity: 0;
+    transition: opacity 1s ease-out;
+  }
+
+  .typo-grid.active {
+    opacity: 1;
+    transition: opacity 0.2s ease-in;
+  }
+
+  .typo-grid img {
+    animation-play-state: paused;
+  }
+
+  .typo-grid.active img,
+  .typo-grid.fading img {
+    animation-play-state: running;
+  }
+
+  #logo-grid img,
+  .typo-grid img {
     width: 100%;
     height: 100%;
     display: block;
@@ -49,7 +121,8 @@
   }
 
   /* globe-with-hat GIF in the centre, faded in while the grid effect plays (timing set in the script).
-     Capped at the GIF's own 400px height so it isn't blown up and blurry. */
+     Capped at the GIF's own 400px height so it isn't blown up and blurry.
+     Clicking it takes you down to the beanies on page 2. */
   #beanie {
     position: absolute;
     top: 50%;
@@ -59,27 +132,8 @@
     width: auto;
     object-fit: contain;
     transform: translate(-50%, -50%);
-    z-index: 0;
+    z-index: 1;
     opacity: 0;
-    pointer-events: none;
-  }
-
-  /* animated GIF that follows the mouse in place of the normal cursor
-     (a CSS cursor can't play an animated GIF, so it's an image moved by the script) */
-  #cursor {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 120px;
-    height: auto;
-    z-index: 100;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  #cursor.visible {
-    opacity: 1;
   }
 
   /* images dropped along the mouse path, alternating Wireframe.gif / AÔ_Transparent.png */
@@ -104,13 +158,6 @@
     to   { opacity: 0; }
   }
 
-  /* only replace the system cursor on devices with a mouse, not touch screens */
-  @media (pointer: fine) {
-    html, html * {
-      cursor: none;
-    }
-  }
-
   @keyframes fade-in {
     from { opacity: 0; }
     to   { opacity: 1; }
@@ -120,7 +167,7 @@
   #carousel {
     position: absolute;
     inset: 0;
-    z-index: 0; /* keeps the logos' own stacking inside the carousel, below the cursor and trail */
+    z-index: 1; /* above the typo grid; keeps the logos' own stacking inside the carousel, below the trail */
     touch-action: pan-y; /* on touch screens, horizontal drags spin it, vertical swipes still scroll */
     user-select: none;
   }
@@ -135,10 +182,10 @@
     -webkit-user-drag: none;
   }
 
-  /* back arrow, shown top left once a logo has been picked and the others have left */
+  /* back arrow, shown top left (below the nav) once a logo has been picked and the others have left */
   #carousel-back {
     position: absolute;
-    top: 24px;
+    top: 104px;
     left: 24px;
     z-index: 1;
     width: 56px;
@@ -297,14 +344,48 @@
     background: white;
     color: black;
   }
+
+  /* text links at the very bottom, below page 2 */
+  #footer {
+    position: relative;
+    background-color: white;
+    border-top: 1px solid black;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px 48px;
+    padding: 32px 24px;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  #footer a {
+    color: black;
+    text-decoration: none;
+  }
+
+  #footer a:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
 </style>
 </head>
 <body>
+<nav id="nav">
+  <a class="nav-home" href="#page-1" aria-label="Home"><img src="AO_GLOBExHAT_Loop.gif" alt=""></a>
+  <!-- placeholder: no cart yet -->
+  <a class="nav-cart" href="#" onclick="return false;" aria-label="Cart"><img src="cart.png" alt=""></a>
+</nav>
 <section id="page-1" class="page">
-  <img id="beanie" src="AO_GLOBExHAT.gif" alt="">
+  <div class="typo-grid"></div>
+  <a href="#page-2" aria-label="Beanies"><img id="beanie" src="AO_GLOBExHAT_Loop.gif" alt=""></a>
   <div id="logo-grid"></div>
 </section>
 <section id="page-2" class="page">
+  <div class="typo-grid"></div>
   <div id="carousel"></div>
   <button id="carousel-back" type="button" aria-label="Back">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -333,14 +414,19 @@
     </div>
   </div>
 </section>
-<img id="cursor" src="Wireframe.gif" alt="">
+<footer id="footer">
+  <a href="terms.html">Terms &amp; Conditions</a>
+  <a href="impressum.html">Impressum</a>
+  <a href="about.html">About Von Campbell</a>
+</footer>
 <script>
   const TILE_SIZE = 120;     // target tile size in px, used to decide how many fit
   const EFFECT_DURATION = 2.8; // seconds, total time the fade in/out effect runs
   const BEANIE_FADE = EFFECT_DURATION; // seconds, how long the beanie takes to fade in (alongside the grid)
 
-  function buildGrid() {
-    const grid = document.getElementById("logo-grid");
+  // fill a grid with tiles of one image and play the flicker on all of them,
+  // once (finishing by EFFECT_DURATION) or, with loop, over and over
+  function flickerGrid(grid, src, loop = false) {
     const cols = Math.max(1, Math.round(window.innerWidth / TILE_SIZE));
     const rows = Math.max(1, Math.round(window.innerHeight / TILE_SIZE));
 
@@ -351,27 +437,76 @@
     const total = cols * rows;
     for (let i = 0; i < total; i++) {
       const img = document.createElement("img");
-      img.src = "AÔ_Transparent.png";
+      img.src = src;
 
       // randomize each tile's timing so the whole grid flickers independently,
       // while still finishing (opacity 0) by roughly EFFECT_DURATION seconds
       const duration = EFFECT_DURATION * (0.7 + Math.random() * 0.3);
-      const delay = Math.random() * (EFFECT_DURATION - duration);
-      img.style.animation = `flicker ${duration}s ease-in-out ${delay}s 1 forwards`;
+      if (loop) {
+        // start each tile at a random point in its cycle so they're out of step straight away
+        img.style.animation = `flicker ${duration}s ease-in-out ${-Math.random() * duration}s infinite`;
+      } else {
+        const delay = Math.random() * (EFFECT_DURATION - duration);
+        img.style.animation = `flicker ${duration}s ease-in-out ${delay}s 1 forwards`;
+      }
 
       grid.appendChild(img);
     }
   }
 
+  // intro: the logo grid flickers over page 1 on load
+  function buildGrid() {
+    flickerGrid(document.getElementById("logo-grid"), "AÔ_Transparent.png");
+  }
+
   buildGrid();
   window.addEventListener("resize", buildGrid);
+
+  // the typo grids behind both pages flicker while you scroll, and fade out
+  // (over TYPO_FADE_OUT seconds, set in the CSS) once scrolling stops
+  const TYPO_SCROLL_IDLE = 150; // ms without a scroll event that counts as "stopped scrolling"
+  const TYPO_FADE_OUT = 1;      // seconds, matches the .typo-grid transition in the CSS
+  const typoGrids = document.querySelectorAll(".typo-grid");
+  function buildTypoGrids() {
+    typoGrids.forEach((grid) => flickerGrid(grid, "AÔ_TypoTransparent.png", true));
+  }
+  buildTypoGrids();
+  window.addEventListener("resize", buildTypoGrids);
+
+  // show the typo flicker and keep it up until it hasn't been called for TYPO_SCROLL_IDLE ms,
+  // then fade it out. Called on every scroll event, and every frame of the carousel's
+  // pick / back animation.
+  let typoStopTimer = null;
+  let typoFadeTimer = null;
+  function showTypo() {
+    clearTimeout(typoStopTimer);
+    clearTimeout(typoFadeTimer);
+    typoGrids.forEach((grid) => {
+      grid.classList.remove("fading");
+      grid.classList.add("active");
+    });
+    typoStopTimer = setTimeout(() => {
+      // keep the tiles flickering while the grid fades out, then pause them
+      typoGrids.forEach((grid) => grid.classList.replace("active", "fading"));
+      typoFadeTimer = setTimeout(() => {
+        typoGrids.forEach((grid) => grid.classList.remove("fading"));
+      }, TYPO_FADE_OUT * 1000);
+    }, TYPO_SCROLL_IDLE);
+  }
+  window.addEventListener("scroll", showTypo, { passive: true });
 
   // the beanie fades in at the same time as the grid effect runs
   document.getElementById("beanie").style.animation =
     `fade-in ${BEANIE_FADE}s ease-in-out 0s 1 forwards`;
 
-  // keep the GIF centred on the mouse; hide it when the mouse leaves the window
-  const cursor = document.getElementById("cursor");
+  // the nav stays hidden at the top of the page and fades in once you've scrolled a bit
+  const NAV_SHOW_SCROLL = 50; // px scrolled down before the nav appears
+  const nav = document.getElementById("nav");
+  function updateNav() {
+    nav.classList.toggle("visible", window.scrollY > NAV_SHOW_SCROLL);
+  }
+  window.addEventListener("scroll", updateNav, { passive: true });
+  updateNav();
 
   // trail: drop an image every TRAIL_GAP px of mouse movement, alternating between the two
   // files, and remove each one TRAIL_LIFETIME seconds after it appears
@@ -402,20 +537,21 @@
   }
 
   if (window.matchMedia("(pointer: fine)").matches) {
+    const page1 = document.getElementById("page-1");
     document.addEventListener("mousemove", (e) => {
-      cursor.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%, -50%)`;
-      cursor.classList.add("visible");
+      // the trail only appears over page 1
+      const rect = page1.getBoundingClientRect();
+      const overPage1 = e.clientY >= rect.top && e.clientY < rect.bottom;
 
-      if (e.buttons !== 0) {
-        // no trail while a mouse button is held (clicking / dragging); keep the drop point
-        // with the mouse so the trail picks up one gap after the button is released
+      if (!overPage1 || e.buttons !== 0) {
+        // no trail outside page 1 or while a mouse button is held (clicking / dragging);
+        // keep the drop point with the mouse so the trail picks up one gap later
         lastDrop = { x: e.clientX, y: e.clientY };
       } else if (!lastDrop || Math.hypot(e.clientX - lastDrop.x, e.clientY - lastDrop.y) >= TRAIL_GAP) {
         dropTrail(e.clientX, e.clientY);
         lastDrop = { x: e.clientX, y: e.clientY };
       }
     });
-    document.documentElement.addEventListener("mouseleave", () => cursor.classList.remove("visible"));
   }
 
   // ---- page 2 carousel ----
@@ -431,15 +567,13 @@
   // It runs forwards while picking and backwards when going back, so the return is an
   // exact mirror of the way out.
 
-  // the original logo plus four hue-shifted copies, one per position on the ring
+  // the original logo plus two recoloured copies, one per position on the ring
   const CAROUSEL_IMAGES = [
     "AÔ_Transparent.png",
-    "AO_Transparent_green.png",
-    "AO_Transparent_blue.png",
-    "AO_Transparent_pink.png",
+    "AO_Transparent_black.png",
     "AO_Transparent_red.png",
   ];
-  const CAROUSEL_COLOR_NAMES = ["Lime", "Green", "Blue", "Pink", "Red"]; // shown in the shop mockup
+  const CAROUSEL_COLOR_NAMES = ["Yellow", "Black", "Red"]; // shown in the shop mockup
   const CAROUSEL_COUNT = CAROUSEL_IMAGES.length;
   const CAROUSEL_SPEED = 20;        // degrees per second when nobody is dragging
   const CAROUSEL_BACK_SCALE = 0.5;  // size at the back (front is 1)
@@ -490,7 +624,7 @@
   let dragTime = 0;
   let pressStart = null; // where the current press began, and which logo it was on
 
-  const ringRadius = () => Math.min(window.innerWidth * 0.35, 380);
+  const ringRadius = () => Math.min(window.innerWidth * 0.25, 260);
 
   // where a logo on the ring is drawn, from its angle
   function ringPose(item) {
@@ -612,13 +746,26 @@
     shop.classList.add("visible");
   }
 
-  backButton.addEventListener("click", () => {
+  // play the pick in reverse, back to the spinning ring
+  function goBack() {
     if (phase !== "picked") return;
     phase = "returning";
     backButton.classList.remove("visible");
     shop.classList.remove("visible");
     // put the picked logo back to its own colour before it rejoins the ring
     picked.img.src = CAROUSEL_IMAGES[items.indexOf(picked)];
+  }
+
+  backButton.addEventListener("click", goBack);
+
+  // the Home button also resets the carousel. It keeps animating while page 2 scrolls out
+  // of view, so the ring is spinning again by the time you come back. If a logo is still
+  // being picked, the reverse starts as soon as the pick has finished.
+  let resetRequested = false;
+  document.querySelector("#nav .nav-home").addEventListener("click", () => {
+    if (phase === "spinning") return;
+    resetRequested = true;
+    goBack();
   });
 
   carousel.addEventListener("pointerdown", (e) => {
@@ -662,7 +809,7 @@
   function tick(now) {
     const dt = Math.min(0.1, (now - lastFrame) / 1000);
     lastFrame = now;
-    if (carouselVisible) {
+    if (carouselVisible || resetRequested) {
       if (phase === "picking") {
         // the remaining logos finish their turn; each leaves once it passes the front
         const before = angle;
@@ -689,6 +836,7 @@
         if (pickTime === 0) {
           phase = "spinning";
           picked = null;
+          resetRequested = false;
           items.forEach((item) => { item.exitTime = null; });
           // it was turning backwards; let it ease round to the normal forward spin
           velocity = -LEAVE_SPIN_SPEED * BACK_SPEED;
@@ -705,13 +853,20 @@
 
       layoutCarousel(now);
 
+      // the typo flicker plays while a logo is being picked and while going back
+      if (phase === "picking" || phase === "returning") showTypo();
+
       // once every other logo has gone, stop the clock (the picked one keeps hovering)
       // and offer the way back
       if (phase === "picking" && items.every((item) => item === picked || item.mode === "gone")) {
         phase = "picked";
         pickDoneTime = pickTime;
-        backButton.classList.add("visible");
-        showShop();
+        if (resetRequested) {
+          goBack(); // Home was clicked mid-pick: head straight back without showing the shop
+        } else {
+          backButton.classList.add("visible");
+          showShop();
+        }
       }
     }
     requestAnimationFrame(tick);
